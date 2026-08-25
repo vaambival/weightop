@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: Comments API
+  version: 1.0.0
+  description: API для управления комментариями (MVP). Поддерживает CRUD операции, чтение по посту и изменение лайков.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Локальный сервер разработки
+
+tags:
+  - name: Comments
+    description: Операции с комментариями
+
+paths:
+  /comments:
+    post:
+      tags:
+        - Comments
+      summary: Создать комментарий
+      operationId: createComment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentCreate'
+      responses:
+        '201':
+          description: Комментарий успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /comments/{commentId}:
+    get:
+      tags:
+        - Comments
+      summary: Получить комментарий по идентификатору
+      operationId: getCommentById
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      responses:
+        '200':
+          description: Комментарий найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Comments
+      summary: Обновить текст комментария
+      operationId: updateCommentText
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentTextUpdate'
+      responses:
+        '200':
+          description: Комментарий успешно обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Comments
+      summary: Удалить комментарий
+      operationId: deleteComment
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      responses:
+        '204':
+          description: Комментарий успешно удалён (без содержимого)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /comments/{commentId}/like:
+    post:
+      tags:
+        - Comments
+      summary: Увеличить количество лайков на 1
+      operationId: incrementLikes
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      responses:
+        '200':
+          description: Количество лайков увеличено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Comments
+      summary: Уменьшить количество лайков на 1
+      operationId: decrementLikes
+      parameters:
+        - $ref: '#/components/parameters/commentId'
+      responses:
+        '200':
+          description: Количество лайков уменьшено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          description: Нельзя уменьшить количество лайков ниже нуля
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /posts/{postId}/comments:
+    get:
+      tags:
+        - Comments
+      summary: Получить список комментариев для поста
+      operationId: getCommentsByPost
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: Идентификатор поста
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          description: Максимальное количество возвращаемых комментариев
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          required: false
+          description: Смещение для пагинации
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Список комментариев
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  parameters:
+    commentId:
+      name: commentId
+      in: path
+      required: true
+      description: Идентификатор комментария
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Comment:
+      type: object
+      required:
+        - id
+        - author
+        - postId
+        - text
+        - likes
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор комментария
+        author:
+          type: string
+          description: Идентификатор автора комментария
+        postId:
+          type: string
+          format: uuid
+          description: Идентификатор поста, к которому относится комментарий
+        text:
+          type: string
+          description: Текст комментария
+        likes:
+          type: integer
+          minimum: 0
+          description: Количество лайков
+        createdAt:
+          type: string
+          format: date-time
+          description: Время создания комментария в формате ISO 8601
+
+    CommentCreate:
+      type: object
+      required:
+        - author
+        - postId
+        - text
+      properties:
+        author:
+          type: string
+          description: Идентификатор автора
+        postId:
+          type: string
+          format: uuid
+          description: Идентификатор поста
+        text:
+          type: string
+          description: Текст комментария
+        likes:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Начальное количество лайков (по умолчанию 0)
+
+    CommentTextUpdate:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+          description: Новый текст комментария
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+          example: "Likes count cannot be negative"
+
+  responses:
+    BadRequest:
+      description: Некорректный запрос (например, невалидные данные)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Запрашиваемый ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

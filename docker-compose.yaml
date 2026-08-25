@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: comments-postgres
+    environment:
+      POSTGRES_DB: comments_db
+      POSTGRES_USER: comment_user
+      POSTGRES_PASSWORD: comment_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U comment_user -d comments_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - comments-network
+
+volumes:
+  postgres_data:
+    name: comments-postgres-data
+
+networks:
+  comments-network:
+    name: comments-network
+    driver: bridge

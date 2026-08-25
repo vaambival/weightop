@@ -1,0 +1,98 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.openapi.generator' version '7.23.0'
+}
+
+group = 'com.weightop'
+version = '0.0.1-SNAPSHOT'
+description = 'Comments API (MVP)'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation("org.springframework.boot:spring-boot-starter-liquibase")
+    implementation 'org.liquibase:liquibase-core'
+    // springdoc-openapi для отображения Swagger UI
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
+
+    runtimeOnly 'org.postgresql:postgresql'
+}
+
+def generatedDir = layout.buildDirectory.dir('generated')
+
+openApiGenerate {
+    generatorName = 'spring'
+    inputSpec = "$projectDir/src/main/resources/openapi.yaml"
+    outputDir = generatedDir.get().asFile
+    apiPackage = 'com.weightop.api'
+    modelPackage = 'com.weightop.model'
+    invokerPackage = 'com.weightop'
+    library = 'spring-boot'
+    generateApiTests = false
+    generateModelTests = false
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    globalProperties = [
+            apis            : '',
+            models          : '',
+            supportingFiles : 'false'
+    ]
+    configOptions = [
+            dateLibrary            : 'java8',
+            interfaceOnly          : 'true',
+            skipDefaultInterface   : 'true',
+            useSpringBoot3         : 'true',
+            useJakartaEe           : 'true',
+            useSpringController    : 'true',
+            requestMappingMode     : 'api_interface',
+            documentationProvider  : 'springdoc',
+            annotationLibrary      : 'swagger2',
+            openApiNullable        : 'false',
+            useBeanValidation      : 'true',
+            hideGenerationTimestamp: 'true',
+            useTags                : 'true'
+    ]
+}
+
+// Подключаем сгенерированный код к исходникам
+sourceSets {
+    main {
+        java {
+            srcDir generatedDir.map { it.dir('src/main/java') }
+        }
+    }
+}
+
+// Явно указываем зависимости компиляции от генерации
+tasks.named('compileJava') {
+    dependsOn 'openApiGenerate'
+}
+
+// Ресурсы тоже зависят от генерации (для корректной работы IDE)
+tasks.named('processResources') {
+    dependsOn 'openApiGenerate'
+}
+
+// Очистка сгенерированного кода при clean
+tasks.named('clean') {
+    doLast {
+        generatedDir.get().asFile.deleteDir()
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
