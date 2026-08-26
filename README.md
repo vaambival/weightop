@@ -21,16 +21,19 @@ The goal of this project is to develop a comment system that can operate under d
 ## Repository Structure
 
 weightop/
-├── v1-simple/ # MVP — simple architecture
-│ ├── README.md
-│ └── ...
-├── v2-inter/ # Intermediate — optimized architecture
-│ ├── README.md
-│ └── ...
-├── v3-highload/ # High-load — distributed architecture
-│ ├── README.md
-│ └── ...
-└── README.md # This file
+├── README.md           
+├── README.ru.md        
+├── v1-simple/
+│   ├── README.md       
+│   ├── src/
+│   ├── build.gradle
+│   └── ...
+├── v2-inter/
+│   ├── README.md       
+│   └── ...
+└── v3-highload/
+    ├── README.md       
+    └── ...
 
 
 ---

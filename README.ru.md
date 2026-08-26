@@ -12,26 +12,28 @@
 
 | Версия | Уровень нагрузки | Описание | Документация |
 |--------|------------------|----------|---------------|
-| **v1-simple** | Низкая (50–100 RPS) | MVP с базовым CRUD, плоскими комментариями, одним PostgreSQL | [README](v1-simple/README.md) |
-| **v2-inter** | Средняя (500–1000 RPS) | Добавлено кэширование, read-реплики, keyset-пагинация | [README](v2-inter/README.md) |
-| **v3-highload** | Высокая (5000+ RPS) | Шардирование, очереди сообщений, денормализация, CDN | [README](v3-highload/README.md) |
+| **v1-simple** | Низкая (50–100 RPS) | MVP с базовым CRUD, плоскими комментариями, одним PostgreSQL | [README](v1-simple/README.ru.md) |
+| **v2-inter** | Средняя (500–1000 RPS) | Добавлено кэширование, read-реплики, keyset-пагинация | [README](v2-inter/README.ru.md) |
+| **v3-highload** | Высокая (5000+ RPS) | Шардирование, очереди сообщений, денормализация, CDN | [README](v3-highload/README.ru.md) |
 
 ---
 
 ## Структура репозитория
 
 weightop/
-├── v1-simple/ # MVP — simple architecture
-│ ├── README.md
-│ └── ...
-├── v2-inter/ # Intermediate — optimized architecture
-│ ├── README.md
-│ └── ...
-├── v3-highload/ # High-load — distributed architecture
-│ ├── README.md
-│ └── ...
-└── README.md # This file
-
+├── README.md           # Английская версия (основная)
+├── README.ru.md        # Русская версия
+├── v1-simple/
+│   ├── README.md       # Документация v1
+│   ├── src/
+│   ├── build.gradle
+│   └── ...
+├── v2-inter/
+│   ├── README.md       # Документация v2
+│   └── ...
+└── v3-highload/
+    ├── README.md       # Документация v3
+    └── ...
 
 ---
 
@@ -39,9 +41,9 @@ weightop/
 
 Каждая версия имеет собственную документацию и инструкции по настройке:
 
-- **[v1-simple](v1-simple/README.md)** — начните здесь, если нужна базовая система комментариев.
-- **[v2-inter](v2-inter/README.md)** — когда v1 перестаёт справляться и нужна лучшая производительность.
-- **[v3-highload](v3-highload/README.md)** — для крупномасштабных распределённых развёртываний.
+- **[v1-simple](v1-simple/README.ru.md)** — начните здесь, если нужна базовая система комментариев.
+- **[v2-inter](v2-inter/README.ru.md)** — когда v1 перестаёт справляться и нужна лучшая производительность.
+- **[v3-highload](v3-highload/README.ru.md)** — для крупномасштабных распределённых развёртываний.
 
 ---
 
