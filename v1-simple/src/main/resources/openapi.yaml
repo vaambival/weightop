@@ -2,21 +2,21 @@ openapi: 3.0.3
 info:
   title: Comments API
   version: 1.0.0
-  description: API для управления комментариями (MVP). Поддерживает CRUD операции, чтение по посту и изменение лайков.
+  description: API for managing comments (MVP). Supports CRUD operations, reading by post, and like management.
 servers:
   - url: http://localhost:8080/api/v1
-    description: Локальный сервер разработки
+    description: Local development server
 
 tags:
   - name: Comments
-    description: Операции с комментариями
+    description: Comment operations
 
 paths:
   /comments:
     post:
       tags:
         - Comments
-      summary: Создать комментарий
+      summary: Create a comment
       operationId: createComment
       requestBody:
         required: true
@@ -26,7 +26,7 @@ paths:
               $ref: '#/components/schemas/CommentCreate'
       responses:
         '201':
-          description: Комментарий успешно создан
+          description: Comment created successfully
           content:
             application/json:
               schema:
@@ -38,13 +38,13 @@ paths:
     get:
       tags:
         - Comments
-      summary: Получить комментарий по идентификатору
+      summary: Get comment by ID
       operationId: getCommentById
       parameters:
         - $ref: '#/components/parameters/commentId'
       responses:
         '200':
-          description: Комментарий найден
+          description: Comment found
           content:
             application/json:
               schema:
@@ -55,7 +55,7 @@ paths:
     put:
       tags:
         - Comments
-      summary: Обновить текст комментария
+      summary: Update comment text
       operationId: updateCommentText
       parameters:
         - $ref: '#/components/parameters/commentId'
@@ -67,7 +67,7 @@ paths:
               $ref: '#/components/schemas/CommentTextUpdate'
       responses:
         '200':
-          description: Комментарий успешно обновлён
+          description: Comment updated successfully
           content:
             application/json:
               schema:
@@ -80,13 +80,13 @@ paths:
     delete:
       tags:
         - Comments
-      summary: Удалить комментарий
+      summary: Delete a comment
       operationId: deleteComment
       parameters:
         - $ref: '#/components/parameters/commentId'
       responses:
         '204':
-          description: Комментарий успешно удалён (без содержимого)
+          description: Comment deleted successfully (no content)
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -94,13 +94,13 @@ paths:
     post:
       tags:
         - Comments
-      summary: Увеличить количество лайков на 1
+      summary: Increment like count by 1
       operationId: incrementLikes
       parameters:
         - $ref: '#/components/parameters/commentId'
       responses:
         '200':
-          description: Количество лайков увеличено
+          description: Like count incremented
           content:
             application/json:
               schema:
@@ -111,19 +111,19 @@ paths:
     delete:
       tags:
         - Comments
-      summary: Уменьшить количество лайков на 1
+      summary: Decrement like count by 1
       operationId: decrementLikes
       parameters:
         - $ref: '#/components/parameters/commentId'
       responses:
         '200':
-          description: Количество лайков уменьшено
+          description: Like count decremented
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Comment'
         '400':
-          description: Нельзя уменьшить количество лайков ниже нуля
+          description: Cannot decrement likes below zero
           content:
             application/json:
               schema:
@@ -135,20 +135,20 @@ paths:
     get:
       tags:
         - Comments
-      summary: Получить список комментариев для поста
+      summary: Get comments for a post
       operationId: getCommentsByPost
       parameters:
         - name: postId
           in: path
           required: true
-          description: Идентификатор поста
+          description: Post identifier
           schema:
             type: string
             format: uuid
         - name: limit
           in: query
           required: false
-          description: Максимальное количество возвращаемых комментариев
+          description: Maximum number of comments to return
           schema:
             type: integer
             minimum: 1
@@ -157,14 +157,14 @@ paths:
         - name: offset
           in: query
           required: false
-          description: Смещение для пагинации
+          description: Pagination offset
           schema:
             type: integer
             minimum: 0
             default: 0
       responses:
         '200':
-          description: Список комментариев
+          description: List of comments
           content:
             application/json:
               schema:
@@ -180,7 +180,7 @@ components:
       name: commentId
       in: path
       required: true
-      description: Идентификатор комментария
+      description: Comment identifier
       schema:
         type: string
         format: uuid
@@ -199,25 +199,25 @@ components:
         id:
           type: string
           format: uuid
-          description: Уникальный идентификатор комментария
+          description: Unique comment identifier
         author:
           type: string
-          description: Идентификатор автора комментария
+          description: Author identifier
         postId:
           type: string
           format: uuid
-          description: Идентификатор поста, к которому относится комментарий
+          description: Post identifier this comment belongs to
         text:
           type: string
-          description: Текст комментария
+          description: Comment text
         likes:
           type: integer
           minimum: 0
-          description: Количество лайков
+          description: Like count
         createdAt:
           type: string
           format: date-time
-          description: Время создания комментария в формате ISO 8601
+          description: Creation time in ISO 8601 format
 
     CommentCreate:
       type: object
@@ -228,19 +228,19 @@ components:
       properties:
         author:
           type: string
-          description: Идентификатор автора
+          description: Author identifier
         postId:
           type: string
           format: uuid
-          description: Идентификатор поста
+          description: Post identifier
         text:
           type: string
-          description: Текст комментария
+          description: Comment text
         likes:
           type: integer
           minimum: 0
           default: 0
-          description: Начальное количество лайков (по умолчанию 0)
+          description: Initial like count (default 0)
 
     CommentTextUpdate:
       type: object
@@ -249,25 +249,25 @@ components:
       properties:
         text:
           type: string
-          description: Новый текст комментария
+          description: New comment text
 
     Error:
       type: object
       properties:
         error:
           type: string
-          description: Описание ошибки
+          description: Error description
           example: "Likes count cannot be negative"
 
   responses:
     BadRequest:
-      description: Некорректный запрос (например, невалидные данные)
+      description: Invalid request (e.g., invalid data)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
     NotFound:
-      description: Запрашиваемый ресурс не найден
+      description: Requested resource not found
       content:
         application/json:
           schema:
