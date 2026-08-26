@@ -20,20 +20,31 @@ The goal of this project is to develop a comment system that can operate under d
 
 ## Repository Structure
 
+```
 weightop/
-├── README.md           
-├── README.ru.md        
-├── v1-simple/
-│   ├── README.md       
+├── README.md           # English version (main)
+├── README.ru.md        # Russian version
+├── v1-simple/          # MVP — simple architecture
+│   ├── README.md       # v1 documentation
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   └── resources/
+│   │   └── test/
+│   ├── build.gradle
+│   ├── settings.gradle
+│   └── docker-compose.yml
+├── v2-inter/           # Intermediate — optimized architecture
+│   ├── README.md       # v2 documentation
 │   ├── src/
 │   ├── build.gradle
-│   └── ...
-├── v2-inter/
-│   ├── README.md       
-│   └── ...
-└── v3-highload/
-    ├── README.md       
-    └── ...
+│   └── docker-compose.yml
+└── v3-highload/        # High-load — distributed architecture
+    ├── README.md       # v3 documentation
+    ├── src/
+    ├── build.gradle
+    └── docker-compose.yml
+```
 
 
 ---
