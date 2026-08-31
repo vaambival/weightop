@@ -1,5 +1,7 @@
-package com.weightop.persistence;
+package com.weightop.persistence.repository;
 
+import com.weightop.persistence.base.BaseRepositoryTest;
+import com.weightop.persistence.model.CommentEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

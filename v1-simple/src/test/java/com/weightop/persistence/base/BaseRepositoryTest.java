@@ -1,4 +1,4 @@
-package com.weightop.persistence;
+package com.weightop.persistence.base;
 
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;

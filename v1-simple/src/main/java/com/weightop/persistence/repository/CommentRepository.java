@@ -1,5 +1,6 @@
-package com.weightop.persistence;
+package com.weightop.persistence.repository;
 
+import com.weightop.persistence.model.CommentEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

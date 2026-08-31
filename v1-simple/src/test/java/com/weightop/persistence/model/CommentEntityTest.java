@@ -1,5 +1,6 @@
-package com.weightop.persistence;
+package com.weightop.persistence.model;
 
+import com.weightop.persistence.base.BaseRepositoryTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

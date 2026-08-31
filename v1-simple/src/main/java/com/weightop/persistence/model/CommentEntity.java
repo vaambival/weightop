@@ -1,4 +1,4 @@
-package com.weightop.persistence;
+package com.weightop.persistence.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
