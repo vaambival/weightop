@@ -143,8 +143,8 @@ paths:
           required: true
           description: Post identifier
           schema:
-            type: string
-            format: uuid
+            type: integer
+            format: int64
         - name: limit
           in: query
           required: false
@@ -182,8 +182,8 @@ components:
       required: true
       description: Comment identifier
       schema:
-        type: string
-        format: uuid
+        type: integer
+        format: int64
 
   schemas:
     Comment:
@@ -197,18 +197,21 @@ components:
         - createdAt
       properties:
         id:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
           description: Unique comment identifier
         author:
-          type: string
+          type: integer
+          format: int64
           description: Author identifier
         postId:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
           description: Post identifier this comment belongs to
         text:
           type: string
+          minLength: 1
+          maxLength: 1024
           description: Comment text
         likes:
           type: integer
@@ -227,14 +230,17 @@ components:
         - text
       properties:
         author:
-          type: string
+          type: integer
+          format: int64
           description: Author identifier
         postId:
-          type: string
-          format: uuid
+          type: integer
+          format: int64
           description: Post identifier
         text:
           type: string
+          minLength: 1
+          maxLength: 1024
           description: Comment text
         likes:
           type: integer
@@ -249,6 +255,8 @@ components:
       properties:
         text:
           type: string
+          minLength: 1
+          maxLength: 1024
           description: New comment text
 
     Error:
