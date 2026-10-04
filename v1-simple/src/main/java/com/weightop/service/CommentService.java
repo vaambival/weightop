@@ -3,6 +3,8 @@ package com.weightop.service;
 import com.weightop.common.CommentSort;
 import com.weightop.exception.CommentNotFoundException;
 import com.weightop.exception.LikesAlreadyZeroException;
+import com.weightop.model.Comment;
+import com.weightop.model.CommentPage;
 import com.weightop.persistence.model.CommentEntity;
 import com.weightop.persistence.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,33 +25,38 @@ public class CommentService {
      * Создать комментарий
      */
     @Transactional
-    public CommentEntity createComment(Long authorId, Long postId, String text) {
+    public Comment createComment(Long authorId, Long postId, String text) {
         CommentEntity entity = new CommentEntity();
         entity.setAuthorId(authorId);
         entity.setPostId(postId);
         entity.setText(text);
         entity.setLikes(0);
-        return commentRepository.save(entity);
+        return commentFromEntity(commentRepository.saveAndFlush(entity));
+    }
+
+    private Comment commentFromEntity(CommentEntity entity) {
+        return new Comment(entity.getId(), entity.getAuthorId(), entity.getPostId(), entity.getText(),
+                entity.getLikes(), entity.getCreatedAt());
     }
 
     /**
      * Получить комментарий по ID
      */
     @Transactional(readOnly = true)
-    public CommentEntity getCommentById(Long commentId) {
-        return commentRepository.findById(commentId)
-                .orElseThrow(() -> new CommentNotFoundException(commentId));
+    public Comment getCommentById(Long commentId) {
+        return commentFromEntity(commentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(commentId)));
     }
 
     /**
      * Обновить текст комментария
      */
     @Transactional
-    public CommentEntity updateCommentText(Long commentId, String newText) {
+    public Comment updateCommentText(Long commentId, String newText) {
         CommentEntity entity = commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentNotFoundException(commentId));
         entity.setText(newText);
-        return commentRepository.save(entity);
+        return commentFromEntity(commentRepository.save(entity));
     }
 
     /**
@@ -89,9 +96,14 @@ public class CommentService {
      * Получить комментарии поста с пагинацией
      */
     @Transactional(readOnly = true)
-    public Page<CommentEntity> getCommentsByPost(Long postId, int offset, int limit, CommentSort sort) {
+    public CommentPage getCommentsByPost(Long postId, int offset, int limit, CommentSort sort) {
         int pageNumber = offset / limit;
         Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by(sort.getField()).descending());
-        return commentRepository.findAllByPostId(postId, pageable);
+        return toCommentPage(commentRepository.findAllByPostId(postId, pageable).map(this::commentFromEntity));
+    }
+
+    private CommentPage toCommentPage(Page<Comment> page) {
+        return new CommentPage(page.getContent(), page.getTotalElements(), page.getTotalPages(),
+                page.getNumber(), page.getSize());
     }
 }

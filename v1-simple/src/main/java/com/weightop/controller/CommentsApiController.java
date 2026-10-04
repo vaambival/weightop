@@ -1,51 +1,60 @@
 package com.weightop.controller;
 
 import com.weightop.api.CommentsApi;
+import com.weightop.common.CommentSort;
 import com.weightop.model.Comment;
 import com.weightop.model.CommentCreate;
+import com.weightop.model.CommentPage;
 import com.weightop.model.CommentTextUpdate;
+import com.weightop.service.CommentService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.UUID;
-
 @RestController
+@RequiredArgsConstructor
 public class CommentsApiController implements CommentsApi {
+
+    private final CommentService commentService;
 
     @Override
     public ResponseEntity<Comment> createComment(CommentCreate commentCreate) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(commentService.createComment(commentCreate.getAuthor(), commentCreate.getPostId(),
+                        commentCreate.getText()));
     }
 
     @Override
-    public ResponseEntity<Void> deleteComment(UUID commentId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Void> deleteComment(Long commentId) {
+        commentService.deleteComment(commentId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Override
-    public ResponseEntity<Comment> getCommentById(UUID commentId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Comment> getCommentById(Long commentId) {
+        return ResponseEntity.ok(commentService.getCommentById(commentId));
     }
 
     @Override
-    public ResponseEntity<List<Comment>> getCommentsByPost(UUID postId, Integer limit, Integer offset) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<CommentPage> getCommentsByPost(Long postId, Integer limit, Integer offset) {
+        return ResponseEntity.ok(commentService.getCommentsByPost(postId, offset, limit, CommentSort.LIKES));
     }
 
     @Override
-    public ResponseEntity<Comment> incrementLikes(UUID commentId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Void> incrementLikes(Long commentId) {
+        commentService.incrementLikes(commentId);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<Comment> decrementLikes(UUID commentId) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Void> decrementLikes(Long commentId) {
+        commentService.decrementLikes(commentId);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<Comment> updateCommentText(UUID commentId, CommentTextUpdate commentUpdate) {
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+    public ResponseEntity<Comment> updateCommentText(Long commentId, CommentTextUpdate commentUpdate) {
+        return ResponseEntity.ok(commentService.updateCommentText(commentId, commentUpdate.getText()));
     }
 }
