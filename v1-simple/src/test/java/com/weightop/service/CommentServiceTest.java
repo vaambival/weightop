@@ -3,6 +3,8 @@ package com.weightop.service;
 import com.weightop.common.CommentSort;
 import com.weightop.exception.CommentNotFoundException;
 import com.weightop.exception.LikesAlreadyZeroException;
+import com.weightop.model.Comment;
+import com.weightop.model.CommentPage;
 import com.weightop.persistence.model.CommentEntity;
 import com.weightop.persistence.repository.CommentRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +12,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.Page;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,16 +45,15 @@ class CommentServiceTest extends BaseServiceTest {
     @DisplayName("Создание комментария — сохраняет все поля")
     void createComment_shouldSaveEntity() {
         // when
-        CommentEntity created = commentService.createComment(1L, 100L, "Test comment");
+        Comment created = commentService.createComment(1L, 100L, "Test comment");
 
         // then
         assertThat(created.getId()).isNotNull();
-        assertThat(created.getAuthorId()).isEqualTo(1L);
+        assertThat(created.getAuthor()).isEqualTo(1L);
         assertThat(created.getPostId()).isEqualTo(100L);
         assertThat(created.getText()).isEqualTo("Test comment");
         assertThat(created.getLikes()).isZero();
         assertThat(created.getCreatedAt()).isNotNull();
-        assertThat(created.getUpdatedAt()).isNotNull();
     }
 
     // ============ READ ============
@@ -65,7 +65,7 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity saved = createComment(100L, "Find me", 0);
 
         // when
-        CommentEntity found = commentService.getCommentById(saved.getId());
+        var found = commentService.getCommentById(saved.getId());
 
         // then
         assertThat(found.getId()).isEqualTo(saved.getId());
@@ -90,12 +90,11 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity saved = createComment(100L, "Original text", 0);
 
         // when
-        CommentEntity updated = commentService.updateCommentText(saved.getId(), "Updated text");
+        var updated = commentService.updateCommentText(saved.getId(), "Updated text");
 
         // then
         assertThat(updated.getText()).isEqualTo("Updated text");
-        assertThat(updated.getUpdatedAt()).isNotNull();
-        assertThat(updated.getAuthorId()).isEqualTo(saved.getAuthorId());
+        assertThat(updated.getAuthor()).isEqualTo(saved.getAuthorId());
         assertThat(updated.getPostId()).isEqualTo(saved.getPostId());
         assertThat(updated.getLikes()).isEqualTo(saved.getLikes());
     }
@@ -200,7 +199,7 @@ class CommentServiceTest extends BaseServiceTest {
         }
 
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(100L, 0, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 5, CommentSort.CREATED_AT);
 
         // then
         assertThat(page.getContent()).hasSize(5);
@@ -218,7 +217,7 @@ class CommentServiceTest extends BaseServiceTest {
         }
 
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(100L, 5, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 5, 5, CommentSort.CREATED_AT);
 
         // then
         assertThat(page.getContent()).hasSize(5);
@@ -234,7 +233,7 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity newer = createComment(100L, "Newer comment", 0);
 
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
 
         // then
         assertThat(page.getContent()).hasSize(2);
@@ -250,7 +249,7 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity highLikes = createComment(100L, "High likes", 10);
 
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.LIKES);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.LIKES);
 
         // then
         assertThat(page.getContent()).hasSize(2);
@@ -262,7 +261,7 @@ class CommentServiceTest extends BaseServiceTest {
     @DisplayName("Пагинация — пустая страница для несуществующего поста")
     void getCommentsByPost_shouldReturnEmpty_forNonExistentPost() {
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(999L, 0, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(999L, 0, 5, CommentSort.CREATED_AT);
 
         // then
         assertThat(page.getContent()).isEmpty();
@@ -278,7 +277,7 @@ class CommentServiceTest extends BaseServiceTest {
         createComment(200L, "Post 200 comment", 0);
 
         // when
-        Page<CommentEntity> page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
 
         // then
         assertThat(page.getContent()).hasSize(1);

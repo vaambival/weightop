@@ -101,10 +101,6 @@ paths:
       responses:
         '200':
           description: Like count incremented
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -118,10 +114,6 @@ paths:
       responses:
         '200':
           description: Like count decremented
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
         '400':
           description: Cannot decrement likes below zero
           content:
@@ -143,8 +135,7 @@ paths:
           required: true
           description: Post identifier
           schema:
-            type: integer
-            format: int64
+            type: long
         - name: limit
           in: query
           required: false
@@ -168,9 +159,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Comment'
+                $ref: '#/components/schemas/CommentPage'
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -182,8 +171,7 @@ components:
       required: true
       description: Comment identifier
       schema:
-        type: integer
-        format: int64
+        type: long
 
   schemas:
     Comment:
@@ -197,21 +185,16 @@ components:
         - createdAt
       properties:
         id:
-          type: integer
-          format: int64
+          type: long
           description: Unique comment identifier
         author:
-          type: integer
-          format: int64
+          type: long
           description: Author identifier
         postId:
-          type: integer
-          format: int64
+          type: long
           description: Post identifier this comment belongs to
         text:
           type: string
-          minLength: 1
-          maxLength: 1024
           description: Comment text
         likes:
           type: integer
@@ -221,6 +204,32 @@ components:
           type: string
           format: date-time
           description: Creation time in ISO 8601 format
+    CommentPage:
+      type: object
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - number
+        - size
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        number:
+          type: integer
+        size:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
 
     CommentCreate:
       type: object
@@ -230,17 +239,13 @@ components:
         - text
       properties:
         author:
-          type: integer
-          format: int64
+          type: long
           description: Author identifier
         postId:
-          type: integer
-          format: int64
+          type: long
           description: Post identifier
         text:
           type: string
-          minLength: 1
-          maxLength: 1024
           description: Comment text
         likes:
           type: integer
@@ -255,8 +260,6 @@ components:
       properties:
         text:
           type: string
-          minLength: 1
-          maxLength: 1024
           description: New comment text
 
     Error:

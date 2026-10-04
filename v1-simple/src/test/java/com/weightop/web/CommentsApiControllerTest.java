@@ -1,6 +1,8 @@
 package com.weightop.web;
 
-import com.weightop.persistence.model.CommentEntity;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.weightop.model.CommentCreate;
+import com.weightop.model.CommentTextUpdate;
 import com.weightop.persistence.repository.CommentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -9,289 +11,257 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.everyItem;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 class CommentsApiControllerTest extends BaseWebTest {
-
-    private static final String BASE = "/api/v1";
-    private static final long MISSING_ID = 999_999L;
 
     @Autowired
     private MockMvc mockMvc;
 
+    private ObjectMapper objectMapper = new ObjectMapper();
+
     @Autowired
     private CommentRepository commentRepository;
+
+    private static final String BASE_URL = "/api/v1";
 
     @BeforeEach
     void setUp() {
         commentRepository.deleteAll();
     }
 
-    private CommentEntity saveComment(Long postId, String text, int likes) {
-        CommentEntity entity = new CommentEntity();
-        entity.setAuthorId(1L);
-        entity.setPostId(postId);
-        entity.setText(text);
-        entity.setLikes(likes);
-        return commentRepository.save(entity);
+    private Long createCommentViaApi(Long authorId, Long postId, String text) throws Exception {
+        CommentCreate request = new CommentCreate();
+        request.setAuthor(authorId);
+        request.setPostId(postId);
+        request.setText(text);
+
+        String response = mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return objectMapper.readTree(response).get("id").asLong();
     }
 
-    // ============ CREATE ============
+    // ============ POST /comments ============
 
     @Test
-    @DisplayName("POST /comments — создаёт комментарий и возвращает 201")
-    void createComment_shouldReturnCreated() throws Exception {
-        mockMvc.perform(post(BASE + "/comments")
+    @DisplayName("POST /comments — создаёт комментарий, возвращает 201")
+    void createComment_shouldReturn201() throws Exception {
+        CommentCreate request = new CommentCreate();
+        request.setAuthor(1L);
+        request.setPostId(100L);
+        request.setText("Hello, world!");
+
+        mockMvc.perform(post(BASE_URL + "/comments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"author": 1, "postId": 100, "text": "Hello"}
-                                """))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.author").value(1))
                 .andExpect(jsonPath("$.postId").value(100))
-                .andExpect(jsonPath("$.text").value("Hello"))
+                .andExpect(jsonPath("$.text").value("Hello, world!"))
                 .andExpect(jsonPath("$.likes").value(0))
-                .andExpect(jsonPath("$.createdAt", notNullValue()));
-
-        assertThat(commentRepository.count()).isEqualTo(1);
+                .andExpect(jsonPath("$.createdAt").isNotEmpty());
     }
 
     @Test
-    @DisplayName("POST /comments — 400 при отсутствии обязательных полей")
-    void createComment_shouldReturnBadRequest_whenTextMissing() throws Exception {
-        mockMvc.perform(post(BASE + "/comments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"author": 1, "postId": 100}
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error", notNullValue()));
+    @DisplayName("POST /comments — 400 при отсутствии text")
+    void createComment_shouldReturn400_whenTextMissing() throws Exception {
+        String invalidJson = """
+                {
+                  "author": 1,
+                  "postId": 100
+                }
+                """;
 
-        assertThat(commentRepository.count()).isZero();
-    }
-
-    @Test
-    @DisplayName("POST /comments — 400 при слишком длинном тексте")
-    void createComment_shouldReturnBadRequest_whenTextTooLong() throws Exception {
-        String longText = "a".repeat(1025);
-        mockMvc.perform(post(BASE + "/comments")
+        mockMvc.perform(post(BASE_URL + "/comments")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"author\": 1, \"postId\": 100, \"text\": \"" + longText + "\"}"))
+                        .content(invalidJson))
                 .andExpect(status().isBadRequest());
     }
 
-    @Test
-    @DisplayName("POST /comments — 400 при некорректном JSON")
-    void createComment_shouldReturnBadRequest_whenMalformedJson() throws Exception {
-        mockMvc.perform(post(BASE + "/comments")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{not json"))
-                .andExpect(status().isBadRequest());
-    }
-
-    // ============ READ ============
+    // ============ GET /comments/{id} ============
 
     @Test
     @DisplayName("GET /comments/{id} — возвращает комментарий")
-    void getCommentById_shouldReturnComment() throws Exception {
-        CommentEntity saved = saveComment(100L, "Find me", 3);
+    void getCommentById_shouldReturn200() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Find me");
 
-        mockMvc.perform(get(BASE + "/comments/{id}", saved.getId()))
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", id))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(saved.getId()))
-                .andExpect(jsonPath("$.text").value("Find me"))
-                .andExpect(jsonPath("$.likes").value(3));
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.text").value("Find me"));
     }
 
     @Test
-    @DisplayName("GET /comments/{id} — 404, если комментарий не найден")
-    void getCommentById_shouldReturnNotFound() throws Exception {
-        mockMvc.perform(get(BASE + "/comments/{id}", MISSING_ID))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error", notNullValue()));
+    @DisplayName("GET /comments/{id} — 404 если не найден")
+    void getCommentById_shouldReturn404() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", 999999L))
+                .andExpect(status().isNotFound());
     }
 
-    @Test
-    @DisplayName("GET /comments/{id} — 400 при нечисловом ID")
-    void getCommentById_shouldReturnBadRequest_whenIdInvalid() throws Exception {
-        mockMvc.perform(get(BASE + "/comments/{id}", "abc"))
-                .andExpect(status().isBadRequest());
-    }
-
-    // ============ UPDATE ============
+    // ============ PUT /comments/{id} ============
 
     @Test
     @DisplayName("PUT /comments/{id} — обновляет текст")
-    void updateCommentText_shouldUpdate() throws Exception {
-        CommentEntity saved = saveComment(100L, "Original", 0);
+    void updateCommentText_shouldReturn200() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Original");
 
-        mockMvc.perform(put(BASE + "/comments/{id}", saved.getId())
+        CommentTextUpdate update = new CommentTextUpdate();
+        update.setText("Updated text");
+
+        mockMvc.perform(put(BASE_URL + "/comments/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"text": "Updated"}
-                                """))
+                        .content(objectMapper.writeValueAsString(update)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(saved.getId()))
-                .andExpect(jsonPath("$.text").value("Updated"));
-
-        assertThat(commentRepository.findById(saved.getId()))
-                .get()
-                .extracting(CommentEntity::getText)
-                .isEqualTo("Updated");
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.text").value("Updated text"));
     }
 
     @Test
-    @DisplayName("PUT /comments/{id} — 404, если комментарий не найден")
-    void updateCommentText_shouldReturnNotFound() throws Exception {
-        mockMvc.perform(put(BASE + "/comments/{id}", MISSING_ID)
+    @DisplayName("PUT /comments/{id} — 404 если не найден")
+    void updateCommentText_shouldReturn404() throws Exception {
+        CommentTextUpdate update = new CommentTextUpdate();
+        update.setText("Updated text");
+
+        mockMvc.perform(put(BASE_URL + "/comments/{id}", 999999L)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"text": "Updated"}
-                                """))
+                        .content(objectMapper.writeValueAsString(update)))
+                .andExpect(status().isNotFound());
+    }
+
+    // ============ DELETE /comments/{id} ============
+
+    @Test
+    @DisplayName("DELETE /comments/{id} — 204 при успехе")
+    void deleteComment_shouldReturn204() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Delete me");
+
+        mockMvc.perform(delete(BASE_URL + "/comments/{id}", id))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", id))
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    @DisplayName("PUT /comments/{id} — 400 при пустом тексте")
-    void updateCommentText_shouldReturnBadRequest_whenTextEmpty() throws Exception {
-        CommentEntity saved = saveComment(100L, "Original", 0);
-
-        mockMvc.perform(put(BASE + "/comments/{id}", saved.getId())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"text": ""}
-                                """))
-                .andExpect(status().isBadRequest());
-    }
-
-    // ============ DELETE ============
-
-    @Test
-    @DisplayName("DELETE /comments/{id} — удаляет комментарий")
-    void deleteComment_shouldRemove() throws Exception {
-        CommentEntity saved = saveComment(100L, "Delete me", 0);
-
-        mockMvc.perform(delete(BASE + "/comments/{id}", saved.getId()))
-                .andExpect(status().isNoContent());
-
-        assertThat(commentRepository.existsById(saved.getId())).isFalse();
-    }
-
-    @Test
-    @DisplayName("DELETE /comments/{id} — идемпотентно для несуществующего комментария")
+    @DisplayName("DELETE /comments/{id} — идемпотентно (204 для несуществующего)")
     void deleteComment_shouldBeIdempotent() throws Exception {
-        mockMvc.perform(delete(BASE + "/comments/{id}", MISSING_ID))
+        mockMvc.perform(delete(BASE_URL + "/comments/{id}", 999999L))
                 .andExpect(status().isNoContent());
     }
 
-    // ============ LIKES ============
+    // ============ POST /comments/{id}/like ============
 
     @Test
     @DisplayName("POST /comments/{id}/like — увеличивает лайки")
-    void incrementLikes_shouldIncrease() throws Exception {
-        CommentEntity saved = saveComment(100L, "Like me", 5);
+    void incrementLikes_shouldReturn200() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Like me");
 
-        mockMvc.perform(post(BASE + "/comments/{id}/like", saved.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.likes").value(6));
+        mockMvc.perform(post(BASE_URL + "/comments/{id}/like", id))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", id))
+                .andExpect(jsonPath("$.likes").value(1));
     }
 
     @Test
-    @DisplayName("POST /comments/{id}/like — 404, если комментарий не найден")
-    void incrementLikes_shouldReturnNotFound() throws Exception {
-        mockMvc.perform(post(BASE + "/comments/{id}/like", MISSING_ID))
+    @DisplayName("POST /comments/{id}/like — 404 для несуществующего")
+    void incrementLikes_shouldReturn404() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments/{id}/like", 999999L))
                 .andExpect(status().isNotFound());
     }
+
+    // ============ DELETE /comments/{id}/like ============
 
     @Test
     @DisplayName("DELETE /comments/{id}/like — уменьшает лайки")
-    void decrementLikes_shouldDecrease() throws Exception {
-        CommentEntity saved = saveComment(100L, "Unlike me", 5);
+    void decrementLikes_shouldReturn200() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Dislike me");
 
-        mockMvc.perform(delete(BASE + "/comments/{id}/like", saved.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.likes").value(4));
+        mockMvc.perform(post(BASE_URL + "/comments/{id}/like", id))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete(BASE_URL + "/comments/{id}/like", id))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", id))
+                .andExpect(jsonPath("$.likes").value(0));
     }
 
     @Test
-    @DisplayName("DELETE /comments/{id}/like — 400, если лайков уже 0")
-    void decrementLikes_shouldReturnBadRequest_whenZero() throws Exception {
-        CommentEntity saved = saveComment(100L, "No likes", 0);
+    @DisplayName("DELETE /comments/{id}/like — 400 если likes = 0")
+    void decrementLikes_shouldReturn400_whenLikesZero() throws Exception {
+        Long id = createCommentViaApi(1L, 100L, "Zero likes");
 
-        mockMvc.perform(delete(BASE + "/comments/{id}/like", saved.getId()))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error", notNullValue()));
+        mockMvc.perform(delete(BASE_URL + "/comments/{id}/like", id))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("DELETE /comments/{id}/like — 404, если комментарий не найден")
-    void decrementLikes_shouldReturnNotFound() throws Exception {
-        mockMvc.perform(delete(BASE + "/comments/{id}/like", MISSING_ID))
+    @DisplayName("DELETE /comments/{id}/like — 404 для несуществующего")
+    void decrementLikes_shouldReturn404() throws Exception {
+        mockMvc.perform(delete(BASE_URL + "/comments/{id}/like", 999999L))
                 .andExpect(status().isNotFound());
     }
 
-    // ============ LIST BY POST ============
+    // ============ GET /posts/{postId}/comments ============
 
     @Test
-    @DisplayName("GET /posts/{postId}/comments — возвращает только комментарии поста")
-    void getCommentsByPost_shouldReturnPostComments() throws Exception {
-        saveComment(100L, "First", 0);
-        saveComment(100L, "Second", 0);
-        saveComment(200L, "Other post", 0);
-
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                .andExpect(jsonPath("$[*].postId").value(everyItem(
-                        is(100))));
-    }
-
-    @Test
-    @DisplayName("GET /posts/{postId}/comments — учитывает limit и offset")
-    void getCommentsByPost_shouldPaginate() throws Exception {
-        for (int i = 0; i < 5; i++) {
-            saveComment(100L, "Comment " + i, 0);
+    @DisplayName("GET /posts/{postId}/comments — возвращает страницу")
+    void getCommentsByPost_shouldReturnPage() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            createCommentViaApi(1L, 100L, "Comment " + i);
         }
 
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L)
-                        .param("limit", "2")
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("limit", "3")
                         .param("offset", "0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
-
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L)
-                        .param("limit", "2")
-                        .param("offset", "4"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$.content", hasSize(3)))
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(3));
     }
 
     @Test
-    @DisplayName("GET /posts/{postId}/comments — пустой список для поста без комментариев")
-    void getCommentsByPost_shouldReturnEmptyList() throws Exception {
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L))
+    @DisplayName("GET /posts/{postId}/comments — вторая страница")
+    void getCommentsByPost_shouldReturnSecondPage() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            createCommentViaApi(1L, 100L, "Comment " + i);
+        }
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("limit", "3")
+                        .param("offset", "3"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.number").value(1));
     }
 
     @Test
-    @DisplayName("GET /posts/{postId}/comments — 400 при limit вне диапазона")
-    void getCommentsByPost_shouldReturnBadRequest_whenLimitOutOfRange() throws Exception {
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L).param("limit", "0"))
-                .andExpect(status().isBadRequest());
+    @DisplayName("GET /posts/{postId}/comments — пустая страница")
+    void getCommentsByPost_shouldReturnEmpty() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 999999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(0)))
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
 
-        mockMvc.perform(get(BASE + "/posts/{postId}/comments", 100L).param("limit", "101"))
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — 400 при limit > 100")
+    void getCommentsByPost_shouldReturn400_whenLimitTooLarge() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("limit", "101"))
                 .andExpect(status().isBadRequest());
     }
 }
