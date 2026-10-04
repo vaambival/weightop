@@ -3,6 +3,6 @@ package com.weightop.exception;
 public class LikesAlreadyZeroException extends RuntimeException {
 
     public LikesAlreadyZeroException(Long commentId) {
-        super("Likes count for comment " + commentId + " is already zero");
+        super("Cannot remove a like from comment " + commentId + ": likes count is already zero");
     }
 }
