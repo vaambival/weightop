@@ -1,7 +1,6 @@
 package com.weightop.controller;
 
 import com.weightop.api.CommentsApi;
-import com.weightop.common.CommentSort;
 import com.weightop.model.Comment;
 import com.weightop.model.CommentCreate;
 import com.weightop.model.CommentPage;
@@ -11,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -37,8 +38,9 @@ public class CommentsApiController implements CommentsApi {
     }
 
     @Override
-    public ResponseEntity<CommentPage> getCommentsByPost(Long postId, Integer limit, Integer offset) {
-        return ResponseEntity.ok(commentService.getCommentsByPost(postId, offset, limit, CommentSort.LIKES));
+    public ResponseEntity<CommentPage> getCommentsByPost(Long postId, Integer limit, Integer offset,
+                                                         List<String> sort) {
+        return ResponseEntity.ok(commentService.getCommentsByPost(postId, offset, limit, sort));
     }
 
     @Override

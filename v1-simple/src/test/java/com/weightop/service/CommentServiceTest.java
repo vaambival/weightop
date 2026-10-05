@@ -1,7 +1,7 @@
 package com.weightop.service;
 
-import com.weightop.common.CommentSort;
 import com.weightop.exception.CommentNotFoundException;
+import com.weightop.exception.InvalidSortException;
 import com.weightop.exception.LikesAlreadyZeroException;
 import com.weightop.model.Comment;
 import com.weightop.model.CommentPage;
@@ -12,6 +12,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -199,7 +203,7 @@ class CommentServiceTest extends BaseServiceTest {
         }
 
         // when
-        CommentPage page = commentService.getCommentsByPost(100L, 0, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 5, List.of("createdAt:desc"));
 
         // then
         assertThat(page.getContent()).hasSize(5);
@@ -217,7 +221,7 @@ class CommentServiceTest extends BaseServiceTest {
         }
 
         // when
-        CommentPage page = commentService.getCommentsByPost(100L, 5, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 5, 5, List.of("createdAt:desc"));
 
         // then
         assertThat(page.getContent()).hasSize(5);
@@ -233,7 +237,7 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity newer = createComment(100L, "Newer comment", 0);
 
         // when
-        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, List.of("createdAt:desc"));
 
         // then
         assertThat(page.getContent()).hasSize(2);
@@ -249,7 +253,7 @@ class CommentServiceTest extends BaseServiceTest {
         CommentEntity highLikes = createComment(100L, "High likes", 10);
 
         // when
-        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.LIKES);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, List.of("likes:desc"));
 
         // then
         assertThat(page.getContent()).hasSize(2);
@@ -261,7 +265,7 @@ class CommentServiceTest extends BaseServiceTest {
     @DisplayName("Пагинация — пустая страница для несуществующего поста")
     void getCommentsByPost_shouldReturnEmpty_forNonExistentPost() {
         // when
-        CommentPage page = commentService.getCommentsByPost(999L, 0, 5, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(999L, 0, 5, List.of("createdAt:desc"));
 
         // then
         assertThat(page.getContent()).isEmpty();
@@ -277,10 +281,74 @@ class CommentServiceTest extends BaseServiceTest {
         createComment(200L, "Post 200 comment", 0);
 
         // when
-        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, CommentSort.CREATED_AT);
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, List.of("createdAt:desc"));
 
         // then
         assertThat(page.getContent()).hasSize(1);
         assertThat(page.getContent().get(0).getText()).isEqualTo("Post 100 comment");
+    }
+
+    @Test
+    @DisplayName("Пагинация — сортировка по умолчанию: лайки по убыванию, затем дата по возрастанию")
+    void getCommentsByPost_shouldUseDefaultSort() {
+        // given
+        createComment(100L, "Old, 5 likes", 5);
+        createComment(100L, "10 likes", 10);
+        createComment(100L, "New, 5 likes", 5);
+
+        // when
+        CommentPage page = commentService.getCommentsByPost(100L, 0, 10, null);
+
+        // then
+        assertThat(page.getContent()).extracting(Comment::getText)
+                .containsExactly("10 likes", "Old, 5 likes", "New, 5 likes");
+    }
+
+    @Test
+    @DisplayName("Пагинация — offset, не кратный limit, возвращает точное окно")
+    void getCommentsByPost_shouldRespectExactOffset() {
+        // given
+        for (int i = 1; i <= 10; i++) {
+            createComment(100L, "Comment " + i, 0);
+        }
+
+        // when
+        CommentPage page = commentService.getCommentsByPost(100L, 2, 3, List.of("createdAt:asc"));
+
+        // then
+        assertThat(page.getContent()).extracting(Comment::getText)
+                .containsExactly("Comment 3", "Comment 4", "Comment 5");
+    }
+
+    @Test
+    @DisplayName("Пагинация — обход всех страниц без дублей и пропусков при равных лайках")
+    void getCommentsByPost_shouldPageWithoutDuplicates_whenLikesAreEqual() {
+        // given
+        for (int i = 1; i <= 23; i++) {
+            createComment(100L, "Comment " + i, 0);
+        }
+
+        // when
+        Set<Long> seen = new HashSet<>();
+        int total = 0;
+        for (int offset = 0; offset < 23; offset += 5) {
+            List<Comment> content = commentService.getCommentsByPost(100L, offset, 5, List.of("likes:desc"))
+                    .getContent();
+            total += content.size();
+            content.forEach(c -> seen.add(c.getId()));
+        }
+
+        // then
+        assertThat(total).isEqualTo(23);
+        assertThat(seen).hasSize(23);
+    }
+
+    @Test
+    @DisplayName("Пагинация — неподдерживаемое поле сортировки")
+    void getCommentsByPost_shouldThrow_whenSortFieldUnsupported() {
+        assertThatThrownBy(() -> commentService.getCommentsByPost(100L, 0, 10, List.of("text:asc")))
+                .isInstanceOf(InvalidSortException.class)
+                .hasMessage("Invalid value 'text:asc' for parameter 'sort': "
+                        + "unsupported field 'text'. Supported fields: createdAt, likes");
     }
 }

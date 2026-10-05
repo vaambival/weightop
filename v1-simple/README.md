@@ -67,10 +67,19 @@ openapi.yaml → [openapi-generator] → DTO + API interfaces → [compileJava]
 - **Parameters**:
     - `limit` — records per page (default 20, max 100).
     - `offset` — offset (default 0, **max 1000**).
-- **Default sorting**: by `created_at DESC` (newest first).
-- **Popularity sorting**: by `likes DESC, created_at DESC` with `sort=popular` flag.
+    - `sort` — optional sort order as `field[:direction]`; repeat the parameter or separate items with commas
+      (e.g. `sort=likes:desc&sort=createdAt:asc` or `sort=likes:desc,createdAt:asc`).
+      Supported fields: `likes`, `createdAt`; directions: `asc` (default), `desc`. Other values are rejected with `400`.
+- **Default sorting**: `likes DESC, created_at ASC` (most popular first; among equal likes, older first).
+- **Tie-breaker**: `id ASC` is always appended so the order is deterministic and pages do not overlap
+  (Postgres sorts it on top of the index; a page is at most 100 rows).
 - **Restriction**: `offset > 1000` is forbidden (protection against deep pagination).
-- **Response format**: array of `Comment` objects without wrapper.
+- **Response format**: `CommentPage` wrapper with page metadata:
+    - `content` — array of `Comment` objects;
+    - `totalElements` — total number of comments of the post;
+    - `totalPages` — number of pages of size `limit`;
+    - `number` — page index (`offset / limit`);
+    - `size` — page size (`limit`).
 
 ### Intentionally Omitted (for MVP)
 

@@ -1,6 +1,7 @@
 package com.weightop.service;
 
-import com.weightop.common.CommentSort;
+import com.weightop.common.CommentSortParser;
+import com.weightop.common.OffsetPageable;
 import com.weightop.exception.CommentNotFoundException;
 import com.weightop.exception.LikesAlreadyZeroException;
 import com.weightop.model.Comment;
@@ -9,11 +10,12 @@ import com.weightop.persistence.model.CommentEntity;
 import com.weightop.persistence.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -93,12 +95,12 @@ public class CommentService {
     }
 
     /**
-     * Получить комментарии поста с пагинацией
+     * Получить комментарии поста с пагинацией и сортировкой
      */
     @Transactional(readOnly = true)
-    public CommentPage getCommentsByPost(Long postId, int offset, int limit, CommentSort sort) {
-        int pageNumber = offset / limit;
-        Pageable pageable = PageRequest.of(pageNumber, limit, Sort.by(sort.getField()).descending());
+    public CommentPage getCommentsByPost(Long postId, int offset, int limit, List<String> sort) {
+        Sort order = CommentSortParser.parse(sort).and(Sort.by(Sort.Order.asc("id")));
+        Pageable pageable = new OffsetPageable(offset, limit, order);
         return toCommentPage(commentRepository.findAllByPostId(postId, pageable).map(this::commentFromEntity));
     }
 

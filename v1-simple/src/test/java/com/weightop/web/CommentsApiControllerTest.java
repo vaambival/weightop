@@ -284,6 +284,102 @@ class CommentsApiControllerTest extends BaseWebTest {
                         .value("Invalid request: parameter 'limit' must be greater than or equal to 1"));
     }
 
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — сортировка по умолчанию: лайки desc, дата asc")
+    void getCommentsByPost_shouldUseDefaultSort() throws Exception {
+        Long first = createCommentViaApi(1L, 100L, "First, no likes");
+        Long popular = createCommentViaApi(1L, 100L, "Two likes");
+        Long second = createCommentViaApi(1L, 100L, "Second, no likes");
+        mockMvc.perform(post(BASE_URL + "/comments/{commentId}/like", popular)).andExpect(status().isOk());
+        mockMvc.perform(post(BASE_URL + "/comments/{commentId}/like", popular)).andExpect(status().isOk());
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id", contains(
+                        popular.intValue(), first.intValue(), second.intValue())));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — сортировка по дате desc")
+    void getCommentsByPost_shouldSortByCreatedAtDesc() throws Exception {
+        Long first = createCommentViaApi(1L, 100L, "First");
+        Long second = createCommentViaApi(1L, 100L, "Second");
+        Long third = createCommentViaApi(1L, 100L, "Third");
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "createdAt:desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id", contains(
+                        third.intValue(), second.intValue(), first.intValue())));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — несколько полей сортировки через запятую и повтор параметра")
+    void getCommentsByPost_shouldSortBySeveralFields() throws Exception {
+        Long first = createCommentViaApi(1L, 100L, "First");
+        Long liked = createCommentViaApi(1L, 100L, "Liked");
+        Long third = createCommentViaApi(1L, 100L, "Third");
+        mockMvc.perform(post(BASE_URL + "/comments/{commentId}/like", liked)).andExpect(status().isOk());
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "likes:asc,createdAt:desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id", contains(
+                        third.intValue(), first.intValue(), liked.intValue())));
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "likes:asc")
+                        .param("sort", "createdAt:desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id", contains(
+                        third.intValue(), first.intValue(), liked.intValue())));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — offset, не кратный limit")
+    void getCommentsByPost_shouldRespectExactOffset() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            createCommentViaApi(1L, 100L, "Comment " + i);
+        }
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "createdAt")
+                        .param("limit", "2")
+                        .param("offset", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].text", contains("Comment 2", "Comment 3")));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — 400 при неподдерживаемом поле сортировки")
+    void getCommentsByPost_shouldReturn400_whenSortFieldUnsupported() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "author:desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid value 'author:desc' for parameter 'sort': "
+                        + "unsupported field 'author'. Supported fields: createdAt, likes"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — 400 при неподдерживаемом направлении сортировки")
+    void getCommentsByPost_shouldReturn400_whenSortDirectionUnsupported() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "likes:up"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid value 'likes:up' for parameter 'sort': "
+                        + "unsupported direction 'up'. Supported directions: asc, desc"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — 400 при повторе поля сортировки")
+    void getCommentsByPost_shouldReturn400_whenSortFieldDuplicated() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("sort", "likes:asc,likes:desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid value 'likes:desc' for parameter 'sort': "
+                        + "field 'likes' is specified more than once"));
+    }
+
     // ============ Error responses ============
 
     @Test
