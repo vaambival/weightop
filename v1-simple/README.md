@@ -38,6 +38,7 @@ openapi.yaml → [openapi-generator] → DTO + API interfaces → [compileJava]
 | POST | `/api/v1/comments/{commentId}/like` | Increment like count by 1 |
 | DELETE | `/api/v1/comments/{commentId}/like` | Decrement like count by 1 |
 | GET | `/api/v1/posts/{postId}/comments` | Get comments for a post (paginated) |
+| GET | `/api/v1/posts/{postId}/comments/count` | Get the number of comments for a post |
 
 ## Database Schema (MVP)
 

@@ -38,6 +38,7 @@ openapi.yaml → [openapi-generator] → DTO + API-интерфейсы → [com
 | POST | `/api/v1/comments/{commentId}/like` | Увеличить количество лайков на 1 |
 | DELETE | `/api/v1/comments/{commentId}/like` | Уменьшить количество лайков на 1 |
 | GET | `/api/v1/posts/{postId}/comments` | Получить комментарии к посту (пагинация) |
+| GET | `/api/v1/posts/{postId}/comments/count` | Получить количество комментариев к посту |
 
 ## Схема базы данных (MVP)
 

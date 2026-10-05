@@ -380,6 +380,42 @@ class CommentsApiControllerTest extends BaseWebTest {
                         + "field 'likes' is specified more than once"));
     }
 
+    // ============ GET /posts/{postId}/comments/count ============
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments/count — возвращает количество комментариев поста")
+    void getCommentsCountByPost_shouldReturnCount() throws Exception {
+        createCommentViaApi(1L, 100L, "First");
+        createCommentViaApi(2L, 100L, "Second");
+        Long deleted = createCommentViaApi(3L, 100L, "Deleted");
+        createCommentViaApi(1L, 200L, "Other post");
+        mockMvc.perform(delete(BASE_URL + "/comments/{commentId}", deleted)).andExpect(status().isNoContent());
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments/count", 100L))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.postId").value(100))
+                .andExpect(jsonPath("$.count").value(2));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments/count — 0 для поста без комментариев")
+    void getCommentsCountByPost_shouldReturnZero_forPostWithoutComments() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments/count", 999999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.postId").value(999999))
+                .andExpect(jsonPath("$.count").value(0));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments/count — 400 при нечисловом postId")
+    void getCommentsCountByPost_shouldReturn400_whenPostIdNotNumeric() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments/count", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Invalid value 'abc' for parameter 'postId': expected an integer"));
+    }
+
     // ============ Error responses ============
 
     @Test

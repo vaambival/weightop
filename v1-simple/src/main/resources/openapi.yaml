@@ -179,6 +179,30 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /posts/{postId}/comments/count:
+    get:
+      tags:
+        - Comments
+      summary: Get the number of comments for a post
+      description: Returns the total number of comments for the post; 0 if the post has no comments.
+      operationId: getCommentsCountByPost
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          description: Post identifier
+          schema:
+            type: long
+      responses:
+        '200':
+          description: Number of comments for the post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentCount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
 components:
   parameters:
     commentId:
@@ -246,6 +270,21 @@ components:
           type: boolean
         last:
           type: boolean
+
+    CommentCount:
+      type: object
+      required:
+        - postId
+        - count
+      properties:
+        postId:
+          type: long
+          description: Post identifier
+        count:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Number of comments for the post
 
     CommentCreate:
       type: object

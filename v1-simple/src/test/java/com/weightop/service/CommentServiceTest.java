@@ -4,6 +4,7 @@ import com.weightop.exception.CommentNotFoundException;
 import com.weightop.exception.InvalidSortException;
 import com.weightop.exception.LikesAlreadyZeroException;
 import com.weightop.model.Comment;
+import com.weightop.model.CommentCount;
 import com.weightop.model.CommentPage;
 import com.weightop.persistence.model.CommentEntity;
 import com.weightop.persistence.repository.CommentRepository;
@@ -190,6 +191,47 @@ class CommentServiceTest extends BaseServiceTest {
         // when & then
         assertThatThrownBy(() -> commentService.decrementLikes(999999L))
                 .isInstanceOf(CommentNotFoundException.class);
+    }
+
+    // ============ COUNT ============
+
+    @Test
+    @DisplayName("Подсчёт — возвращает количество комментариев поста")
+    void getCommentsCountByPost_shouldReturnCount() {
+        // given
+        createComment(100L, "First", 0);
+        createComment(100L, "Second", 3);
+        createComment(200L, "Other post", 0);
+
+        // when
+        CommentCount count = commentService.getCommentsCountByPost(100L);
+
+        // then
+        assertThat(count.getPostId()).isEqualTo(100L);
+        assertThat(count.getCount()).isEqualTo(2L);
+    }
+
+    @Test
+    @DisplayName("Подсчёт — учитывает удаление комментария")
+    void getCommentsCountByPost_shouldDecrease_afterDelete() {
+        // given
+        createComment(100L, "Keep", 0);
+        CommentEntity toDelete = createComment(100L, "Delete", 0);
+
+        // when
+        commentService.deleteComment(toDelete.getId());
+
+        // then
+        assertThat(commentService.getCommentsCountByPost(100L).getCount()).isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("Подсчёт — 0 для поста без комментариев")
+    void getCommentsCountByPost_shouldReturnZero_forNonExistentPost() {
+        CommentCount count = commentService.getCommentsCountByPost(999L);
+
+        assertThat(count.getPostId()).isEqualTo(999L);
+        assertThat(count.getCount()).isZero();
     }
 
     // ============ PAGINATION ============

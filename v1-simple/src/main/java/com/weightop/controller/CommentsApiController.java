@@ -2,6 +2,7 @@ package com.weightop.controller;
 
 import com.weightop.api.CommentsApi;
 import com.weightop.model.Comment;
+import com.weightop.model.CommentCount;
 import com.weightop.model.CommentCreate;
 import com.weightop.model.CommentPage;
 import com.weightop.model.CommentTextUpdate;
@@ -41,6 +42,11 @@ public class CommentsApiController implements CommentsApi {
     public ResponseEntity<CommentPage> getCommentsByPost(Long postId, Integer limit, Integer offset,
                                                          List<String> sort) {
         return ResponseEntity.ok(commentService.getCommentsByPost(postId, offset, limit, sort));
+    }
+
+    @Override
+    public ResponseEntity<CommentCount> getCommentsCountByPost(Long postId) {
+        return ResponseEntity.ok(commentService.getCommentsCountByPost(postId));
     }
 
     @Override
