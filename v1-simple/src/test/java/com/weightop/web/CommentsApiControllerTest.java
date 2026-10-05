@@ -256,6 +256,21 @@ class CommentsApiControllerTest extends BaseWebTest {
     }
 
     @Test
+    @DisplayName("GET /posts/{postId}/comments — вторая страница")
+    void getCommentsByPost_shouldReturnWithOtherStartSecondPage() throws Exception {
+        for (int i = 1; i <= 5; i++) {
+            createCommentViaApi(1L, 100L, "Comment " + i);
+        }
+
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("limit", "3")
+                        .param("offset", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(3)))
+                .andExpect(jsonPath("$.number").value(0));
+    }
+
+    @Test
     @DisplayName("GET /posts/{postId}/comments — пустая страница")
     void getCommentsByPost_shouldReturnEmpty() throws Exception {
         mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 999999L))
