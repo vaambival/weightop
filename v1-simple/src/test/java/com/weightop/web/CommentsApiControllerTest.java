@@ -85,7 +85,8 @@ class CommentsApiControllerTest extends BaseWebTest {
         mockMvc.perform(post(BASE_URL + "/comments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request body: field 'text' must not be null"));
     }
 
     // ============ GET /comments/{id} ============
@@ -105,7 +106,8 @@ class CommentsApiControllerTest extends BaseWebTest {
     @DisplayName("GET /comments/{id} — 404 если не найден")
     void getCommentById_shouldReturn404() throws Exception {
         mockMvc.perform(get(BASE_URL + "/comments/{id}", 999999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Comment with id 999999 not found"));
     }
 
     // ============ PUT /comments/{id} ============
@@ -135,7 +137,8 @@ class CommentsApiControllerTest extends BaseWebTest {
         mockMvc.perform(put(BASE_URL + "/comments/{id}", 999999L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(update)))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Comment with id 999999 not found"));
     }
 
     // ============ DELETE /comments/{id} ============
@@ -177,7 +180,8 @@ class CommentsApiControllerTest extends BaseWebTest {
     @DisplayName("POST /comments/{id}/like — 404 для несуществующего")
     void incrementLikes_shouldReturn404() throws Exception {
         mockMvc.perform(post(BASE_URL + "/comments/{id}/like", 999999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Comment with id 999999 not found"));
     }
 
     // ============ DELETE /comments/{id}/like ============
@@ -203,14 +207,17 @@ class CommentsApiControllerTest extends BaseWebTest {
         Long id = createCommentViaApi(1L, 100L, "Zero likes");
 
         mockMvc.perform(delete(BASE_URL + "/comments/{id}/like", id))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Cannot remove a like from comment " + id + ": likes count is already zero"));
     }
 
     @Test
     @DisplayName("DELETE /comments/{id}/like — 404 для несуществующего")
     void decrementLikes_shouldReturn404() throws Exception {
         mockMvc.perform(delete(BASE_URL + "/comments/{id}/like", 999999L))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Comment with id 999999 not found"));
     }
 
     // ============ GET /posts/{postId}/comments ============
@@ -262,6 +269,117 @@ class CommentsApiControllerTest extends BaseWebTest {
     void getCommentsByPost_shouldReturn400_whenLimitTooLarge() throws Exception {
         mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
                         .param("limit", "101"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Invalid request: parameter 'limit' must be less than or equal to 100"));
+    }
+
+    @Test
+    @DisplayName("GET /posts/{postId}/comments — 400 при limit < 1")
+    void getCommentsByPost_shouldReturn400_whenLimitTooSmall() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/posts/{postId}/comments", 100L)
+                        .param("limit", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Invalid request: parameter 'limit' must be greater than or equal to 1"));
+    }
+
+    // ============ Error responses ============
+
+    @Test
+    @DisplayName("Ошибки — сообщения на английском независимо от Accept-Language")
+    void errors_shouldBeInEnglish_regardlessOfAcceptLanguage() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .header("Accept-Language", "ru-RU")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request body: "
+                        + "field 'author' must not be null; "
+                        + "field 'postId' must not be null; "
+                        + "field 'text' must not be null"));
+    }
+
+    @Test
+    @DisplayName("POST /comments — 400 при слишком длинном тексте")
+    void createComment_shouldReturn400_whenTextTooLong() throws Exception {
+        CommentCreate request = new CommentCreate();
+        request.setAuthor(1L);
+        request.setPostId(100L);
+        request.setText("a".repeat(1025));
+
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Invalid request body: field 'text' size must be between 0 and 1024"));
+    }
+
+    @Test
+    @DisplayName("POST /comments — 400 при некорректном JSON")
+    void createComment_shouldReturn400_whenMalformedJson() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"author\": 1,"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request body: malformed JSON"));
+    }
+
+    @Test
+    @DisplayName("POST /comments — 400 при неверном типе поля")
+    void createComment_shouldReturn400_whenFieldHasWrongType() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"author": "abc", "postId": 100, "text": "Hi"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Invalid request body: field 'author' has an invalid value"));
+    }
+
+    @Test
+    @DisplayName("POST /comments — 400 без тела запроса")
+    void createComment_shouldReturn400_whenBodyMissing() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Request body is missing"));
+    }
+
+    @Test
+    @DisplayName("POST /comments — 415 при неподдерживаемом Content-Type")
+    void createComment_shouldReturn415_whenContentTypeUnsupported() throws Exception {
+        mockMvc.perform(post(BASE_URL + "/comments")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("hello"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.error")
+                        .value("Content type 'text/plain' is not supported. Use 'application/json'"));
+    }
+
+    @Test
+    @DisplayName("GET /comments/{id} — 400 при нечисловом id")
+    void getCommentById_shouldReturn400_whenIdNotNumber() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/comments/{id}", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error")
+                        .value("Invalid value 'abc' for parameter 'commentId': expected an integer"));
+    }
+
+    @Test
+    @DisplayName("PATCH /comments/{id} — 405 для неподдерживаемого метода")
+    void unsupportedMethod_shouldReturn405() throws Exception {
+        mockMvc.perform(patch(BASE_URL + "/comments/{id}", 1L))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.error", startsWith("HTTP method PATCH is not supported for this endpoint")));
+    }
+
+    @Test
+    @DisplayName("Неизвестный endpoint — 404 с понятным сообщением")
+    void unknownEndpoint_shouldReturn404() throws Exception {
+        mockMvc.perform(get(BASE_URL + "/unknown"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Endpoint GET /api/v1/unknown does not exist"));
     }
 }

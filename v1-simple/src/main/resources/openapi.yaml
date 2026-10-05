@@ -246,6 +246,7 @@ components:
           description: Post identifier
         text:
           type: string
+          maxLength: 1024
           description: Comment text
         likes:
           type: integer
@@ -260,6 +261,7 @@ components:
       properties:
         text:
           type: string
+          maxLength: 1024
           description: New comment text
 
     Error:
