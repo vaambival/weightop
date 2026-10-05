@@ -5,6 +5,7 @@ import com.weightop.common.OffsetPageable;
 import com.weightop.exception.CommentNotFoundException;
 import com.weightop.exception.LikesAlreadyZeroException;
 import com.weightop.model.Comment;
+import com.weightop.model.CommentCount;
 import com.weightop.model.CommentPage;
 import com.weightop.persistence.model.CommentEntity;
 import com.weightop.persistence.repository.CommentRepository;
@@ -102,6 +103,14 @@ public class CommentService {
         Sort order = CommentSortParser.parse(sort).and(Sort.by(Sort.Order.asc("id")));
         Pageable pageable = new OffsetPageable(offset, limit, order);
         return toCommentPage(commentRepository.findAllByPostId(postId, pageable).map(this::commentFromEntity));
+    }
+
+    /**
+     * Получить количество комментариев поста
+     */
+    @Transactional(readOnly = true)
+    public CommentCount getCommentsCountByPost(Long postId) {
+        return new CommentCount(postId, commentRepository.countByPostId(postId));
     }
 
     private CommentPage toCommentPage(Page<Comment> page) {

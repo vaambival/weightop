@@ -206,6 +206,26 @@ class CommentRepositoryTest extends BaseRepositoryTest {
     }
 
     @Test
+    @DisplayName("Подсчёт — возвращает количество комментариев только указанного поста")
+    void countByPostId_shouldCountOnlyPostComments() {
+        // given
+        createComment(100L, "First", 0);
+        createComment(100L, "Second", 5);
+        createComment(100L, "Third", 0);
+        createComment(200L, "Other post", 0);
+
+        // when & then
+        assertThat(commentRepository.countByPostId(100L)).isEqualTo(3);
+        assertThat(commentRepository.countByPostId(200L)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Подсчёт — 0 для поста без комментариев")
+    void countByPostId_shouldReturnZero_forNonExistentPost() {
+        assertThat(commentRepository.countByPostId(999L)).isZero();
+    }
+
+    @Test
     @DisplayName("Удаление — физически удаляет запись")
     void delete_shouldRemoveEntity() {
         // given

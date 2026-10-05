@@ -27,4 +27,6 @@ public interface CommentRepository extends JpaRepository<CommentEntity, Long>,
     int decrementLikes(@Param("commentId") Long commentId);
 
     Page<CommentEntity> findAllByPostId(Long postId, Pageable pageRequest);
+
+    long countByPostId(Long postId);
 }
