@@ -1,6 +1,7 @@
 package com.weightop.controller;
 
 import com.weightop.exception.CommentNotFoundException;
+import com.weightop.exception.InvalidSortException;
 import com.weightop.exception.LikesAlreadyZeroException;
 import com.weightop.model.Error;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(LikesAlreadyZeroException.class)
     public ResponseEntity<Error> handleLikesAlreadyZero(LikesAlreadyZeroException ex) {
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidSortException.class)
+    public ResponseEntity<Error> handleInvalidSort(InvalidSortException ex) {
         return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 

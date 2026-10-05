@@ -153,6 +153,22 @@ paths:
             type: integer
             minimum: 0
             default: 0
+        - name: sort
+          in: query
+          required: false
+          description: >-
+            Sort order as `field` or `field:direction`. Repeat the parameter or separate items
+            with commas to sort by several fields, e.g. `sort=likes:desc&sort=createdAt:asc`
+            or `sort=likes:desc,createdAt:asc`. Supported fields: `likes`, `createdAt`.
+            Supported directions: `asc` (default), `desc`. If omitted, comments are sorted by
+            `likes:desc,createdAt:asc`. Comment `id` is always used as the final tie-breaker.
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              example: likes:desc
       responses:
         '200':
           description: List of comments
